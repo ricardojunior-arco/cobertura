@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel de Cobertura ST vs NFs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+      }
+      .checkbox-custom,
+      .radio-custom {
+        -webkit-appearance: none;
+        appearance: none;
+        background-color: #fff;
+        margin: 0;
+        font: inherit;
+        color: currentColor;
+        width: 1.15em;
+        height: 1.15em;
+        border: 0.15em solid #9ca3af;
+        transform: translateY(-0.075em);
+        display: grid;
+        place-content: center;
+        cursor: pointer;
+      }
+      .checkbox-custom {
+        border-radius: 0.25em;
+      }
+      .radio-custom {
+        border-radius: 50%;
+      }
+
+      .checkbox-custom::before {
+        content: '';
+        width: 0.65em;
+        height: 0.65em;
+        transform: scale(0);
+        transition: 120ms transform ease-in-out;
+        box-shadow: inset 1em 1em #3b82f6;
+        transform-origin: bottom left;
+        clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+      }
+      .radio-custom::before {
+        content: '';
+        width: 0.65em;
+        height: 0.65em;
+        border-radius: 50%;
+        transform: scale(0);
+        transition: 120ms transform ease-in-out;
+        box-shadow: inset 1em 1em #3b82f6;
+      }
+
+      .checkbox-custom:checked,
+      .radio-custom:checked {
+        border-color: #3b82f6;
+      }
+      .checkbox-custom:checked::before,
+      .radio-custom:checked::before {
+        transform: scale(1);
+      }
+      .status-light {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .status-green {
+        background-color: #22c55e;
+      }
+      .status-gray {
+        background-color: #6b7280;
+      }
+
+      #transportadora-table-container {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body class="p-4 sm:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <div class="bg-white p-6 rounded-2xl shadow-lg">
+        <!-- Cabeçalho -->
+        <div class="mb-8">
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+            Painel de Cobertura ST vs Volumetria de NFs
+          </h1>
+          <p class="text-gray-600">
+            Análise da cobertura do sistema de transporte em relação ao volume
+            de notas fiscais da Arco.
+          </p>
+        </div>
+
+        <!-- Métricas Dinâmicas -->
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 text-center"
+        >
+          <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-200">
+            <h3 class="text-lg font-semibold text-indigo-800">
+              Marcas Integradas
+            </h3>
+            <p
+              id="metric-integradas"
+              class="text-3xl font-bold text-indigo-600 mt-2"
+            >
+              0%
+            </p>
+            <p class="text-sm text-indigo-700">Cobertura (SAS, SAE, NCC)</p>
+            <p
+              id="metric-integradas-nao-cobertas"
+              class="text-sm text-indigo-700 font-semibold mt-1 h-5"
+            ></p>
+          </div>
+          <div class="bg-purple-50 p-5 rounded-xl border border-purple-200">
+            <h3 class="text-lg font-semibold text-purple-800">
+              Cenário: Todas Marcas
+            </h3>
+            <p
+              id="metric-cenario"
+              class="text-3xl font-bold text-purple-600 mt-2"
+            >
+              0%
+            </p>
+            <p class="text-sm text-purple-700">
+              Cobertura Potencial com a esteira
+            </p>
+            <p
+              id="metric-cenario-nao-cobertas"
+              class="text-sm text-purple-700 font-semibold mt-1 h-5"
+            ></p>
+          </div>
+          <div class="bg-teal-50 p-5 rounded-xl border border-teal-200">
+            <h3 class="text-lg font-semibold text-teal-800">
+              Cobertura Total Arco
+            </h3>
+            <p
+              id="metric-total-arco"
+              class="text-3xl font-bold text-teal-600 mt-2"
+            >
+              0%
+            </p>
+            <p class="text-sm text-teal-700">NFS no ST / Total Arco</p>
+            <p
+              id="metric-total-arco-nao-cobertas"
+              class="text-sm text-teal-700 font-semibold mt-1 h-5"
+            ></p>
+          </div>
+          <div class="bg-blue-50 p-5 rounded-xl border border-blue-200">
+            <h3 class="text-lg font-semibold text-blue-800">
+              Cobertura da Seleção
+            </h3>
+            <p
+              id="metric-selecao"
+              class="text-3xl font-bold text-blue-600 mt-2"
+            >
+              0%
+            </p>
+            <p class="text-sm text-blue-700">Cobertura NFs Selecionadas</p>
+            <p
+              id="metric-selecao-nao-cobertas"
+              class="text-sm text-blue-700 font-semibold mt-1 h-5"
+            ></p>
+          </div>
+        </div>
+
+        <!-- Controles e Gráfico -->
+        <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+          <div class="mb-6 border-b border-gray-200 pb-6">
+            <h2 class="text-xl font-bold text-gray-700 mb-4">Filtros</h2>
+            <div class="flex flex-col sm:flex-row gap-6">
+              <div>
+                <h3 class="font-semibold text-gray-700 mb-2">Modalidade</h3>
+                <div class="flex items-center space-x-4" id="modalidade-filter">
+                  <label class="flex items-center space-x-2 cursor-pointer p-1">
+                    <input
+                      type="radio"
+                      name="modalidade"
+                      value="TODAS"
+                      class="radio-custom"
+                      checked
+                    />
+                    <span>Todas</span>
+                  </label>
+                  <label class="flex items-center space-x-2 cursor-pointer p-1">
+                    <input
+                      type="radio"
+                      name="modalidade"
+                      value="DEDICADO"
+                      class="radio-custom"
+                    />
+                    <span>Dedicado</span>
+                  </label>
+                  <label class="flex items-center space-x-2 cursor-pointer p-1">
+                    <input
+                      type="radio"
+                      name="modalidade"
+                      value="FRACIONADO"
+                      class="radio-custom"
+                    />
+                    <span>Fracionado</span>
+                  </label>
+                </div>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-700 mb-2">Marcas</h3>
+                <div
+                  class="flex items-center space-x-3 sm:space-x-4 flex-wrap"
+                  id="marca-checkboxes"
+                >
+                  <!-- Checkboxes de marca serão inseridos aqui -->
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="height: 500px">
+            <canvas id="coberturaChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel Share Transportadoras -->
+      <div class="bg-white p-6 rounded-2xl shadow-lg">
+        <h2 class="text-xl font-bold text-gray-700 mb-4">
+          Share por Transportadora (Seleção Atual)
+        </h2>
+        <div id="transportadora-table-container" class="pr-2">
+          <table class="w-full text-left table-auto">
+            <thead class="bg-gray-100 sticky top-0">
+              <tr>
+                <th class="p-3 text-sm font-semibold text-gray-600 text-center">
+                  Status
+                </th>
+                <th class="p-3 text-sm font-semibold text-gray-600">
+                  Transportadora
+                </th>
+                <th class="p-3 text-sm font-semibold text-gray-600">
+                  Modalidade
+                </th>
+                <th class="p-3 text-sm font-semibold text-gray-600 text-right">
+                  Volume NFs
+                </th>
+                <th class="p-3 text-sm font-semibold text-gray-600 text-right">
+                  Share
+                </th>
+              </tr>
+            </thead>
+            <tbody id="transportadora-tbody" class="divide-y divide-gray-200">
+              <!-- Linhas da tabela serão inseridas aqui -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Dados de ST da versão anterior para mapeamento
+      const stStatusMap = {
+        AEROFOR: false,
+        ARTROX: false,
+        BRASPRESS: true,
+        BRIX: false,
+        CAMILO: true,
+        'COPAL TRANSPORTES LTDA': false,
+        CORREIOS: false,
+        'CRUZEIRO DO SUL': false,
+        'EAGLE SOLUCOES LOGISTICAS LTDA': false,
+        ENTENDER: false,
+        'EXPRESSO 24 HORAS TRANSPORTES E LOGISTICA LTDA': false,
+        FARRAPOS: true,
+        GBEX: true,
+        GORDO: false,
+        INNOVARE: false,
+        'LAGO SUL TRANSPORTES E LOCACAO LTDA': false,
+        LOCAL: false,
+        LOGGI: false,
+        LS: false,
+        MGM: true,
+        MOOVWAY: false,
+        PATRUS: true,
+        'RBX LOGISTICA EIRELI': false,
+        RODONAVES: true,
+        'SÃO MIGUEL': false,
+        SOLISTICA: true,
+        TAM: false,
+        TBL: false,
+        TELECARGO: false,
+        TRANSLOVATO: false,
+        'TROCA TRANSPORTES LTDA': false,
+        'VIACAO AGUIA BRANCA S/A': false,
+        '#N/DISP': false,
+      };
+
+      const csvData = `TRANSP,MODALIDADE,COC,GEEKIE,NAVE,NCC,PSD,SAE,SAS
+AEROFOR,DEDICADO,28,,,,,111,725
+ARTROX,DEDICADO,8,2,54,6,23,11,59
+BRASPRESS,FRACIONADO,10080,2211,2195,6682,26528,1941,4071
+BRIX,DEDICADO,32,4,12,49,273,19,52
+CAMILO,FRACIONADO,1638,,,,1,6476,9213
+COPAL TRANSPORTES LTDA,DEDICADO,1,,,,,,
+CORREIOS,FRACIONADO,,,,,1,,
+CRUZEIRO DO SUL,FRACIONADO,,,,,2082,,
+EAGLE SOLUCOES LOGISTICAS LTDA,DEDICADO,18,,,,12,5,38
+ENTENDER,DEDICADO,,,,,2,1,1
+EXPRESSO 24 HORAS TRANSPORTES E LOGISTICA LTDA,DEDICADO,1,,8,2,2,1,510
+FARRAPOS,DEDICADO,1,,,,,3,
+GBEX,FRACIONADO,,,,,,4547,6777
+GORDO,DEDICADO,,,,,,40,67
+INNOVARE,DEDICADO,99,4,126,58,525,132,1261
+LAGO SUL TRANSPORTES E LOCACAO LTDA,DEDICADO,,5,,,,,
+LOCAL,FRACIONADO,,,,,15850,,
+LOGGI,FRACIONADO,,,,,266,,
+LS,FRACIONADO,593,,,,,,
+MGM,FRACIONADO,,,,,,650,1936
+MOOVWAY,DEDICADO,114,15,342,34,472,29,216
+PATRUS,FRACIONADO,,,,,,2917,3280
+RBX LOGISTICA EIRELI,DEDICADO,,,,,,,7,39
+RODONAVES,FRACIONADO,985,2216,1658,2006,20505,6883,14983
+SÃO MIGUEL,DEDICADO,,,,,,,1792
+SOLISTICA,FRACIONADO,1153,600,61,309,6864,1327,1255
+TAM,DEDICADO,,,,2,,,
+TBL,FRACIONADO,,,,294,,,
+TELECARGO,DEDICADO,141,2,66,1,55,59,130
+TRANSLOVATO,DEDICADO,100,,,,,,13
+TROCA TRANSPORTES LTDA,DEDICADO,,,,6,,,
+VIACAO AGUIA BRANCA S/A,DEDICADO,,,1,3,,,1
+#N/DISP,DEDICADO,,,,,,,1`;
+
+      const marcas = ['COC', 'GEEKIE', 'NAVE', 'NCC', 'PSD', 'SAE', 'SAS'];
+      let chart;
+      let masterDadosTransp;
+
+      // Processa todos os dados iniciais
+      function processarDadosIniciais() {
+        const linhas = csvData.trim().split('\n').slice(1);
+        return linhas.map((linha) => {
+          const colunas = linha.split(',');
+          const nomeTransp = colunas[0];
+          const transp = {
+            nome: nomeTransp,
+            modalidade: colunas[1],
+            st: stStatusMap[nomeTransp] || false,
+            volumes: {},
+          };
+          marcas.forEach((marca, index) => {
+            transp.volumes[marca] = parseInt(colunas[index + 2], 10) || 0;
+          });
+          return transp;
+        });
+      }
+
+      function recalcularDadosMarca(transportadorasFiltradas) {
+        const dadosProcessados = {};
+        marcas.forEach((m) => {
+          dadosProcessados[m] = { comCobertura: 0, semCobertura: 0 };
+        });
+
+        transportadorasFiltradas.forEach((transp) => {
+          marcas.forEach((marca) => {
+            const valor = transp.volumes[marca] || 0;
+            if (valor > 0) {
+              if (transp.st) dadosProcessados[marca].comCobertura += valor;
+              else dadosProcessados[marca].semCobertura += valor;
+            }
+          });
+        });
+        return dadosProcessados;
+      }
+
+      function updateMetrics(dadosMarca) {
+        // Marcas Integradas
+        const marcasIntegradas = ['SAS', 'SAE', 'NCC'];
+        let comIntegradas = 0,
+          semIntegradas = 0;
+        marcasIntegradas.forEach((m) => {
+          comIntegradas += dadosMarca[m].comCobertura;
+          semIntegradas += dadosMarca[m].semCobertura;
+        });
+        const totalIntegradas = comIntegradas + semIntegradas;
+        document.getElementById(
+          'metric-integradas'
+        ).textContent = `${(totalIntegradas > 0
+          ? (comIntegradas / totalIntegradas) * 100
+          : 0
+        ).toFixed(2)}%`;
+        document.getElementById(
+          'metric-integradas-nao-cobertas'
+        ).textContent = `${semIntegradas.toLocaleString(
+          'pt-BR'
+        )} NFs não cobertas`;
+
+        // Cenário Todas Marcas
+        let comTodas = 0,
+          semTodas = 0;
+        marcas.forEach((m) => {
+          comTodas += dadosMarca[m].comCobertura;
+          semTodas += dadosMarca[m].semCobertura;
+        });
+        const totalTodas = comTodas + semTodas;
+        document.getElementById('metric-cenario').textContent = `${(totalTodas >
+        0
+          ? (comTodas / totalTodas) * 100
+          : 0
+        ).toFixed(2)}%`;
+        document.getElementById(
+          'metric-cenario-nao-cobertas'
+        ).textContent = `${semTodas.toLocaleString('pt-BR')} NFs não cobertas`;
+
+        // Cobertura Total Arco
+        const totalArcoComCobertura = comIntegradas;
+        const totalArcoNFs = totalTodas;
+        const totalArcoNaoCobertas = totalArcoNFs - totalArcoComCobertura;
+        document.getElementById(
+          'metric-total-arco'
+        ).textContent = `${(totalArcoNFs > 0
+          ? (totalArcoComCobertura / totalArcoNFs) * 100
+          : 0
+        ).toFixed(2)}%`;
+        document.getElementById(
+          'metric-total-arco-nao-cobertas'
+        ).textContent = `${totalArcoNaoCobertas.toLocaleString(
+          'pt-BR'
+        )} NFs não cobertas`;
+      }
+
+      function updateTransportadoraTable(transportadoras, marcasSelecionadas) {
+        const tbody = document.getElementById('transportadora-tbody');
+        tbody.innerHTML = '';
+
+        if (marcasSelecionadas.length === 0 || transportadoras.length === 0)
+          return;
+
+        const dadosFiltrados = transportadoras
+          .map((transp) => {
+            const volumeSelecionado = marcasSelecionadas.reduce(
+              (sum, marca) => sum + transp.volumes[marca],
+              0
+            );
+            return { ...transp, volumeSelecionado };
+          })
+          .filter((t) => t.volumeSelecionado > 0);
+
+        const grandTotal = dadosFiltrados.reduce(
+          (sum, t) => sum + t.volumeSelecionado,
+          0
+        );
+
+        dadosFiltrados.sort(
+          (a, b) => b.volumeSelecionado - a.volumeSelecionado
+        );
+
+        dadosFiltrados.forEach((transp) => {
+          const share =
+            grandTotal > 0 ? (transp.volumeSelecionado / grandTotal) * 100 : 0;
+          const statusClass = transp.st ? 'status-green' : 'status-gray';
+          const row = `
+            <tr class="hover:bg-gray-50">
+                <td class="p-3 text-center"><span class="status-light ${statusClass}"></span></td>
+                <td class="p-3 font-medium text-gray-800">${transp.nome}</td>
+                <td class="p-3 text-gray-600">${transp.modalidade}</td>
+                <td class="p-3 text-right text-gray-600">${transp.volumeSelecionado.toLocaleString(
+                  'pt-BR'
+                )}</td>
+                <td class="p-3 text-right text-gray-600 font-semibold">${share.toFixed(
+                  2
+                )}%</td>
+            </tr>`;
+          tbody.innerHTML += row;
+        });
+      }
+
+      function updateDashboard() {
+        const selectedModalidade = document.querySelector(
+          'input[name="modalidade"]:checked'
+        ).value;
+        const marcasSelecionadas = Array.from(
+          document.querySelectorAll('.marca-cb:checked')
+        ).map((cb) => cb.value);
+
+        const transportadorasFiltradas = masterDadosTransp.filter(
+          (t) =>
+            selectedModalidade === 'TODAS' ||
+            t.modalidade === selectedModalidade
+        );
+
+        const dadosMarcaFiltrados = recalcularDadosMarca(
+          transportadorasFiltradas
+        );
+
+        updateMetrics(dadosMarcaFiltrados);
+
+        let comCoberturaSelecao = 0,
+          semCoberturaSelecao = 0;
+        marcasSelecionadas.forEach((m) => {
+          comCoberturaSelecao += dadosMarcaFiltrados[m].comCobertura;
+          semCoberturaSelecao += dadosMarcaFiltrados[m].semCobertura;
+        });
+        const totalNFsSelecao = comCoberturaSelecao + semCoberturaSelecao;
+        document.getElementById(
+          'metric-selecao'
+        ).textContent = `${(totalNFsSelecao > 0
+          ? (comCoberturaSelecao / totalNFsSelecao) * 100
+          : 0
+        ).toFixed(2)}%`;
+        document.getElementById(
+          'metric-selecao-nao-cobertas'
+        ).textContent = `${semCoberturaSelecao.toLocaleString(
+          'pt-BR'
+        )} NFs não cobertas`;
+
+        chart.data.labels = marcasSelecionadas;
+        chart.data.datasets[0].data = marcasSelecionadas.map(
+          (m) => dadosMarcaFiltrados[m].comCobertura
+        );
+        chart.data.datasets[1].data = marcasSelecionadas.map(
+          (m) => dadosMarcaFiltrados[m].semCobertura
+        );
+        chart.update();
+
+        updateTransportadoraTable(transportadorasFiltradas, marcasSelecionadas);
+      }
+
+      function setupControls() {
+        const container = document.getElementById('marca-checkboxes');
+        container.innerHTML = `<label class="flex items-center space-x-2 font-semibold cursor-pointer p-1">
+                <input type="checkbox" id="select-all" class="checkbox-custom" checked>
+                <span>Todas</span>
+            </label>`;
+        marcas.forEach((marca) => {
+          container.innerHTML += `<label class="flex items-center space-x-2 cursor-pointer p-1">
+                    <input type="checkbox" value="${marca}" class="marca-cb checkbox-custom" checked>
+                    <span>${marca}</span>
+                </label>`;
+        });
+
+        document
+          .querySelectorAll('input[name="modalidade"]')
+          .forEach((radio) => {
+            radio.addEventListener('change', updateDashboard);
+          });
+
+        const selectAll = document.getElementById('select-all');
+        const marcaCheckboxes = document.querySelectorAll('.marca-cb');
+
+        selectAll.addEventListener('change', (e) => {
+          marcaCheckboxes.forEach((cb) => {
+            cb.checked = e.target.checked;
+          });
+          updateDashboard();
+        });
+        marcaCheckboxes.forEach((cb) =>
+          cb.addEventListener('change', () => {
+            selectAll.checked = Array.from(marcaCheckboxes).every(
+              (c) => c.checked
+            );
+            updateDashboard();
+          })
+        );
+      }
+
+      window.addEventListener('load', () => {
+        masterDadosTransp = processarDadosIniciais();
+        setupControls();
+
+        const ctx = document.getElementById('coberturaChart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Com Cobertura ST',
+                data: [],
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderRadius: 4,
+              },
+              {
+                label: 'Sem Cobertura ST',
+                data: [],
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                borderRadius: 4,
+              },
+            ],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                stacked: true,
+                grid: { color: '#e5e7eb' },
+                ticks: { callback: (v) => v.toLocaleString('pt-BR') },
+              },
+              y: { stacked: true, grid: { display: false } },
+            },
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { usePointStyle: true, pointStyle: 'rectRounded' },
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const { dataset, raw, dataIndex } = context;
+                    const total = chart.data.datasets.reduce(
+                      (sum, ds) => sum + (ds.data[dataIndex] || 0),
+                      0
+                    );
+                    const perc =
+                      total > 0 ? ((raw / total) * 100).toFixed(2) : 0;
+                    return `${dataset.label}: ${raw.toLocaleString(
+                      'pt-BR'
+                    )} (${perc}%)`;
+                  },
+                },
+              },
+            },
+          },
+        });
+        updateDashboard();
+      });
+    </script>
+  </body>
+</html>
